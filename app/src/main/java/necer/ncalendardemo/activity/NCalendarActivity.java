@@ -22,15 +22,15 @@ import necer.ncalendardemo.R;
 import necer.ncalendardemo.adapter.AAAdapter;
 
 /**
- * Created by 闫彬彬 on 2017/8/25.
+ * Created by 闫彬彬 on 2017/9/27.
  * QQ:619008099
  */
 
 public class NCalendarActivity extends AppCompatActivity implements OnCalendarChangedListener {
 
+
     private NCalendar ncalendar;
     private RecyclerView recyclerView;
-
     private TextView tv_month;
     private TextView tv_date;
 
@@ -46,7 +46,7 @@ public class NCalendarActivity extends AppCompatActivity implements OnCalendarCh
             localLayoutParams.flags = (WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS | localLayoutParams.flags);
         }
 
-        ncalendar = (NCalendar) findViewById(R.id.ncalendar);
+        ncalendar = (NCalendar) findViewById(R.id.ncalendarrrr);
         recyclerView = (RecyclerView) findViewById(R.id.recyclerView);
         tv_month = (TextView) findViewById(R.id.tv_month);
         tv_date = (TextView) findViewById(R.id.tv_date);
@@ -78,15 +78,13 @@ public class NCalendarActivity extends AppCompatActivity implements OnCalendarCh
 
     @Override
     public void onCalendarChanged(DateTime dateTime) {
-
         tv_month.setText(dateTime.getMonthOfYear() + "月");
         tv_date.setText(dateTime.getYear() + "年" + dateTime.getMonthOfYear() + "月" + dateTime.getDayOfMonth() + "日");
     }
 
 
-
     public void setDate(View view) {
-        ncalendar.setDate("2100-12-31");
+        ncalendar.setDate("2017-12-31");
     }
 
     public void toMonth(View view) {
@@ -101,7 +99,16 @@ public class NCalendarActivity extends AppCompatActivity implements OnCalendarCh
         ncalendar.toToday();
     }
 
-    public void setPoint() {
+    public void toNextPager(View view) {
+        ncalendar.toNextPager();
+    }
+
+    public void toLastPager(View view) {
+        ncalendar.toLastPager();
+    }
+
+
+    public void setPoint(View view) {
         List<String> list = new ArrayList<>();
         list.add("2017-09-21");
         list.add("2017-10-21");
@@ -113,8 +120,4 @@ public class NCalendarActivity extends AppCompatActivity implements OnCalendarCh
 
         ncalendar.setPoint(list);
     }
-
-
-
-
 }

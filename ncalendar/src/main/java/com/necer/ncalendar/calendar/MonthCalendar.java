@@ -3,126 +3,181 @@ package com.necer.ncalendar.calendar;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.util.SparseArray;
+import android.widget.Toast;
 
+import com.necer.ncalendar.R;
 import com.necer.ncalendar.adapter.CalendarAdapter;
-import com.necer.ncalendar.adapter.MonthCalendarAdapter;
-import com.necer.ncalendar.listener.OnClickMonthCalendarListener;
+import com.necer.ncalendar.adapter.MonthAdapter;
 import com.necer.ncalendar.listener.OnClickMonthViewListener;
-import com.necer.ncalendar.listener.OnMonthCalendarPageChangeListener;
+import com.necer.ncalendar.listener.OnMonthCalendarChangedListener;
 import com.necer.ncalendar.utils.Utils;
 import com.necer.ncalendar.view.CalendarView;
 import com.necer.ncalendar.view.MonthView;
 
 import org.joda.time.DateTime;
-import org.joda.time.Months;
-
-import java.util.List;
 
 /**
- * Created by necer on 2017/6/12.
- * 月视图日历
+ * Created by 闫彬彬 on 2017/8/28.
+ * QQ:619008099
  */
 
-public class MonthCalendar extends CalendarViewPager implements OnClickMonthViewListener {
+public class MonthCalendar extends CalendarPager implements OnClickMonthViewListener {
 
-
-    private OnClickMonthCalendarListener onClickMonthCalendarListener;
-    private OnMonthCalendarPageChangeListener onMonthCalendarPageChangeListener;
-
-
-    public MonthCalendar(Context context) {
-        this(context, null);
-    }
+    private OnMonthCalendarChangedListener onMonthCalendarChangedListener;
+    private int lastPosition = -1;
 
     public MonthCalendar(Context context, AttributeSet attrs) {
         super(context, attrs);
     }
 
     @Override
-    protected CalendarAdapter getCalendarAdapter(List<String> pointList) {
-        mPageSize = Months.monthsBetween(startDateTime, endDateTime).getMonths() + 1;
-        mCurrPage = Months.monthsBetween(startDateTime, DateTime.now()).getMonths();
-        return new MonthCalendarAdapter(getContext(), mPageSize, mCurrPage, new DateTime(), this, pointList);
+    protected CalendarAdapter getCalendarAdapter() {
+
+        mPageSize = Utils.getIntervalMonths(startDateTime, endDateTime) + 1;
+        mCurrPage = Utils.getIntervalMonths(startDateTime, mInitialDateTime);
+
+        return new MonthAdapter(getContext(), mPageSize, mCurrPage, mInitialDateTime, this);
     }
 
 
     @Override
-    protected void initCurrentCalendarView() {
-        currentView = calendarAdapter.getCalendarViews().get(getCurrentItem());
-        if (onMonthCalendarPageChangeListener != null && currentView != null) {
-            DateTime selectDateTime = currentView.getSelectDateTime();
-            DateTime initialDateTime = currentView.getInitialDateTime();
-            onMonthCalendarPageChangeListener.onMonthCalendarPageSelected(selectDateTime == null ? initialDateTime : selectDateTime);
+    protected void initCurrentCalendarView(int position) {
+
+        MonthView currView = (MonthView) calendarAdapter.getCalendarViews().get(position);
+        MonthView lastView = (MonthView) calendarAdapter.getCalendarViews().get(position - 1);
+        MonthView nextView = (MonthView) calendarAdapter.getCalendarViews().get(position + 1);
+
+
+        if (currView == null) {
+            return;
         }
+
+        if (lastView != null)
+            lastView.clear();
+
+        if (nextView != null)
+            nextView.clear();
+
+
+        //只处理翻页
+        if (lastPosition == -1) {
+            currView.setDateTimeAndPoint(mInitialDateTime, pointList);
+            mSelectDateTime = mInitialDateTime;
+            lastSelectDateTime = mInitialDateTime;
+            if (onMonthCalendarChangedListener != null) {
+                onMonthCalendarChangedListener.onMonthCalendarChanged(mSelectDateTime);
+            }
+        } else if (isPagerChanged) {
+            int i = position - lastPosition;
+            mSelectDateTime = mSelectDateTime.plusMonths(i);
+
+            if (isDefaultSelect) {
+                //日期越界
+                if (mSelectDateTime.getMillis() > endDateTime.getMillis()) {
+                    mSelectDateTime = endDateTime;
+                } else if (mSelectDateTime.getMillis() < startDateTime.getMillis()) {
+                    mSelectDateTime = startDateTime;
+                }
+
+                currView.setDateTimeAndPoint(mSelectDateTime, pointList);
+                if (onMonthCalendarChangedListener != null) {
+                    onMonthCalendarChangedListener.onMonthCalendarChanged(mSelectDateTime);
+                }
+            } else {
+                if (Utils.isEqualsMonth(lastSelectDateTime, mSelectDateTime)) {
+                    currView.setDateTimeAndPoint(lastSelectDateTime, pointList);
+                }
+            }
+
+        }
+        lastPosition = position;
+    }
+
+    public void setOnMonthCalendarChangedListener(OnMonthCalendarChangedListener onMonthCalendarChangedListener) {
+        this.onMonthCalendarChangedListener = onMonthCalendarChangedListener;
+    }
+
+    @Override
+    protected void setDateTime(DateTime dateTime) {
+
+        if (dateTime.getMillis() > endDateTime.getMillis() || dateTime.getMillis() < startDateTime.getMillis()) {
+            Toast.makeText(getContext(), R.string.illegal_date, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        SparseArray<CalendarView> calendarViews = calendarAdapter.getCalendarViews();
+        if (calendarViews.size() == 0) {
+            return;
+        }
+
+        isPagerChanged = false;
+
+        MonthView currectMonthView = getCurrectMonthView();
+        DateTime initialDateTime = currectMonthView.getInitialDateTime();
+
+        //不是当月
+        if (!Utils.isEqualsMonth(initialDateTime, dateTime)) {
+            int months = Utils.getIntervalMonths(initialDateTime, dateTime);
+
+            int i = getCurrentItem() + months;
+            setCurrentItem(i, Math.abs(months) < 2);
+            currectMonthView = getCurrectMonthView();
+        }
+
+        currectMonthView.setDateTimeAndPoint(dateTime, pointList);
+        mSelectDateTime = dateTime;
+        lastSelectDateTime = dateTime;
+
+        isPagerChanged = true;
+
+        if (onMonthCalendarChangedListener != null) {
+            onMonthCalendarChangedListener.onMonthCalendarChanged(mSelectDateTime);
+        }
+
+
     }
 
     @Override
     public void onClickCurrentMonth(DateTime dateTime) {
-        doClickEvent(dateTime, getCurrentItem());
+        dealClickEvent(dateTime, getCurrentItem());
     }
 
     @Override
     public void onClickLastMonth(DateTime dateTime) {
         int currentItem = getCurrentItem() - 1;
-        doClickEvent(dateTime, currentItem);
+        dealClickEvent(dateTime, currentItem);
     }
 
     @Override
     public void onClickNextMonth(DateTime dateTime) {
         int currentItem = getCurrentItem() + 1;
-        doClickEvent(dateTime, currentItem);
+        dealClickEvent(dateTime, currentItem);
     }
 
-    @Override
-    public void setDate(int year, int month, int day, boolean smoothScroll) {
-        DateTime dateTime = new DateTime(year, month, day, 0, 0, 0);
-        int i = jumpDate(dateTime, smoothScroll);
-        MonthView monthView = (MonthView) calendarAdapter.getCalendarViews().get(i);
-        if (monthView == null) {
+    private void dealClickEvent(DateTime dateTime, int currentItem) {
+
+        if (dateTime.getMillis() > endDateTime.getMillis() || dateTime.getMillis() < startDateTime.getMillis()) {
+            Toast.makeText(getContext(), R.string.illegal_date, Toast.LENGTH_SHORT).show();
             return;
         }
-        monthView.setSelectDateTime(dateTime);
-    }
 
-    @Override
-    public int jumpDate(DateTime dateTime, boolean smoothScroll) {
-        SparseArray<CalendarView> calendarViews = calendarAdapter.getCalendarViews();
-        if (calendarViews.size() == 0) {
-            return getCurrentItem();
+        isPagerChanged = false;
+        setCurrentItem(currentItem, true);
+        MonthView nMonthView = getCurrectMonthView();
+        nMonthView.setDateTimeAndPoint(dateTime, pointList);
+        mSelectDateTime = dateTime;
+        lastSelectDateTime = dateTime;
+
+        isPagerChanged = true;
+
+        if (onMonthCalendarChangedListener != null) {
+            onMonthCalendarChangedListener.onMonthCalendarChanged(dateTime);
         }
-        DateTime initialDateTime = calendarViews.get(getCurrentItem()).getInitialDateTime();
-        int months = Utils.getIntervalMonths(initialDateTime, dateTime);
-
-        int i = getCurrentItem() + months;
-        setCurrentItem(i, smoothScroll);
-        return i;
     }
 
 
-    public void setOnClickMonthCalendarListener(OnClickMonthCalendarListener onClickMonthCalendarListener) {
-        this.onClickMonthCalendarListener = onClickMonthCalendarListener;
+    public MonthView getCurrectMonthView() {
+        return (MonthView) calendarAdapter.getCalendarViews().get(getCurrentItem());
     }
 
-    public void setOnMonthCalendarPageChangeListener(OnMonthCalendarPageChangeListener onMonthCalendarPageChangeListener) {
-        this.onMonthCalendarPageChangeListener = onMonthCalendarPageChangeListener;
-    }
-
-
-    private void doClickEvent(DateTime dateTime, int currentItem) {
-        MonthCalendar.this.setCurrentItem(currentItem);
-        MonthView monthView = (MonthView) calendarAdapter.getCalendarViews().get(currentItem);
-        if (monthView == null) {
-            return;
-        }
-        monthView.setSelectDateTime(dateTime);
-        //清除其他选中
-        if (!isMultiple) {
-            clearSelect(monthView);
-        }
-        if (onClickMonthCalendarListener != null) {
-            onClickMonthCalendarListener.onClickMonthCalendar(dateTime);
-        }
-
-    }
 }
-

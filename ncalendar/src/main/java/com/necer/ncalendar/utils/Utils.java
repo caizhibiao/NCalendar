@@ -5,7 +5,8 @@ import android.content.res.AssetManager;
 import android.util.TypedValue;
 
 import org.joda.time.DateTime;
-import org.joda.time.Days;
+import org.joda.time.Months;
+import org.joda.time.Weeks;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -70,7 +71,7 @@ public class Utils {
 
     //是否同月
     public static boolean isEqualsMonth(DateTime dateTime1, DateTime dateTime2) {
-        return dateTime1.getMonthOfYear() == dateTime2.getMonthOfYear();
+        return dateTime1.getYear() == dateTime2.getYear() && dateTime1.getMonthOfYear() == dateTime2.getMonthOfYear();
     }
 
 
@@ -106,7 +107,9 @@ public class Utils {
      * @return
      */
     public static int getIntervalMonths(DateTime dateTime1, DateTime dateTime2) {
-        return (dateTime2.getYear() - dateTime1.getYear()) * 12 + (dateTime2.getMonthOfYear() - dateTime1.getMonthOfYear());
+        dateTime1 = dateTime1.withTimeAtStartOfDay();
+        dateTime2 = dateTime2.withTimeAtStartOfDay();
+        return Months.monthsBetween(dateTime1, dateTime2).getMonths();
     }
 
     /**
@@ -114,19 +117,21 @@ public class Utils {
      *
      * @param dateTime1
      * @param dateTime2
+     * @param type      一周
      * @return
      */
-    public static int getIntervalWeek(DateTime dateTime1, DateTime dateTime2) {
-        DateTime sunFirstDayOfWeek1 = getSunFirstDayOfWeek(dateTime1);
-        DateTime sunFirstDayOfWeek2 = getSunFirstDayOfWeek(dateTime2);
-        int days = Days.daysBetween(sunFirstDayOfWeek1, sunFirstDayOfWeek2).getDays();
-        if (days > 0) {
-            return (days + 1) / 7;
-        } else if (days < 0) {
-            return (days - 1) / 7;
+    public static int getIntervalWeek(DateTime dateTime1, DateTime dateTime2, int type) {
+
+        if (type == 0) {
+            dateTime1 = getSunFirstDayOfWeek(dateTime1);
+            dateTime2 = getSunFirstDayOfWeek(dateTime2);
         } else {
-            return days;
+            dateTime1 = getMonFirstDayOfWeek(dateTime1);
+            dateTime2 = getMonFirstDayOfWeek(dateTime2);
         }
+
+        return Weeks.weeksBetween(dateTime1, dateTime2).getWeeks();
+
     }
 
 
@@ -137,7 +142,8 @@ public class Utils {
      * @return
      */
     public static boolean isToday(DateTime dateTime) {
-        return new DateTime().toLocalDate().equals(dateTime.toLocalDate());
+        return new DateTime().withTimeAtStartOfDay().equals(dateTime);
+
     }
 
     public static NCalendar getMonthCalendar(DateTime dateTime) {
@@ -151,7 +157,6 @@ public class Utils {
         NCalendar nCalendar = new NCalendar();
         List<DateTime> dateTimeList = new ArrayList<>();
         List<String> lunarList = new ArrayList<>();
-        List<String> localDateList = new ArrayList<>();
 
         int j = 1;
         for (int i = 0; i < 42; i++) {
@@ -166,14 +171,12 @@ public class Utils {
                 j++;
             }
             dateTimeList.add(dateTime1);
-            localDateList.add(dateTime1.toLocalDate().toString());
             LunarCalendarUtils.Lunar lunar = LunarCalendarUtils.solarToLunar(new LunarCalendarUtils.Solar(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth()));
             String lunarDayString = LunarCalendarUtils.getLunarDayString(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth(), lunar.lunarYear, lunar.lunarMonth, lunar.lunarDay, lunar.isLeap);
             lunarList.add(lunarDayString);
         }
 
         nCalendar.dateTimeList = dateTimeList;
-        nCalendar.localDateList = localDateList;
         nCalendar.lunarList = lunarList;
         return nCalendar;
     }
@@ -199,7 +202,6 @@ public class Utils {
         NCalendar nCalendar = new NCalendar();
         List<DateTime> dateTimes = new ArrayList<>();
         List<String> lunarList = new ArrayList<>();
-        List<String> localDateList = new ArrayList<>();
 
         //周日开始的
         if (type == 0) {
@@ -207,10 +209,7 @@ public class Utils {
             if (firstDayOfWeek != 7) {
                 for (int i = 0; i < firstDayOfWeek; i++) {
                     DateTime dateTime1 = new DateTime(lastMonthDateTime.getYear(), lastMonthDateTime.getMonthOfYear(), lastMonthDays - (firstDayOfWeek - i - 1), 0, 0, 0);
-
                     dateTimes.add(dateTime1);
-                    localDateList.add(dateTime1.toLocalDate().toString());
-
                     LunarCalendarUtils.Lunar lunar = LunarCalendarUtils.solarToLunar(new LunarCalendarUtils.Solar(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth()));
                     String lunarDayString = LunarCalendarUtils.getLunarDayString(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth(), lunar.lunarYear, lunar.lunarMonth, lunar.lunarDay, lunar.isLeap);
                     lunarList.add(lunarDayString);
@@ -220,8 +219,6 @@ public class Utils {
             for (int i = 0; i < days; i++) {
                 DateTime dateTime1 = new DateTime(dateTime.getYear(), dateTime.getMonthOfYear(), i + 1, 0, 0, 0);
                 dateTimes.add(dateTime1);
-                localDateList.add(dateTime1.toLocalDate().toString());
-
                 LunarCalendarUtils.Lunar lunar = LunarCalendarUtils.solarToLunar(new LunarCalendarUtils.Solar(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth()));
                 String lunarDayString = LunarCalendarUtils.getLunarDayString(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth(), lunar.lunarYear, lunar.lunarMonth, lunar.lunarDay, lunar.isLeap);
                 lunarList.add(lunarDayString);
@@ -233,8 +230,6 @@ public class Utils {
             for (int i = 0; i < 6 - endDayOfWeek; i++) {
                 DateTime dateTime1 = new DateTime(nextMonthDateTime.getYear(), nextMonthDateTime.getMonthOfYear(), i + 1, 0, 0, 0);
                 dateTimes.add(dateTime1);
-                localDateList.add(dateTime1.toLocalDate().toString());
-
                 LunarCalendarUtils.Lunar lunar = LunarCalendarUtils.solarToLunar(new LunarCalendarUtils.Solar(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth()));
                 String lunarDayString = LunarCalendarUtils.getLunarDayString(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth(), lunar.lunarYear, lunar.lunarMonth, lunar.lunarDay, lunar.isLeap);
                 lunarList.add(lunarDayString);
@@ -244,7 +239,6 @@ public class Utils {
             for (int i = 0; i < firstDayOfWeek - 1; i++) {
                 DateTime dateTime1 = new DateTime(lastMonthDateTime.getYear(), lastMonthDateTime.getMonthOfYear(), lastMonthDays - (firstDayOfWeek - i - 2), 0, 0, 0);
                 dateTimes.add(dateTime1);
-                localDateList.add(dateTime1.toLocalDate().toString());
 
                 LunarCalendarUtils.Lunar lunar = LunarCalendarUtils.solarToLunar(new LunarCalendarUtils.Solar(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth()));
                 String lunarDayString = LunarCalendarUtils.getLunarDayString(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth(), lunar.lunarYear, lunar.lunarMonth, lunar.lunarDay, lunar.isLeap);
@@ -253,7 +247,6 @@ public class Utils {
             for (int i = 0; i < days; i++) {
                 DateTime dateTime1 = new DateTime(dateTime.getYear(), dateTime.getMonthOfYear(), i + 1, 0, 0, 0);
                 dateTimes.add(dateTime1);
-                localDateList.add(dateTime1.toLocalDate().toString());
 
                 LunarCalendarUtils.Lunar lunar = LunarCalendarUtils.solarToLunar(new LunarCalendarUtils.Solar(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth()));
                 String lunarDayString = LunarCalendarUtils.getLunarDayString(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth(), lunar.lunarYear, lunar.lunarMonth, lunar.lunarDay, lunar.isLeap);
@@ -262,7 +255,6 @@ public class Utils {
             for (int i = 0; i < 7 - endDayOfWeek; i++) {
                 DateTime dateTime1 = new DateTime(nextMonthDateTime.getYear(), nextMonthDateTime.getMonthOfYear(), i + 1, 0, 0, 0);
                 dateTimes.add(dateTime1);
-                localDateList.add(dateTime1.toLocalDate().toString());
 
                 LunarCalendarUtils.Lunar lunar = LunarCalendarUtils.solarToLunar(new LunarCalendarUtils.Solar(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth()));
                 String lunarDayString = LunarCalendarUtils.getLunarDayString(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth(), lunar.lunarYear, lunar.lunarMonth, lunar.lunarDay, lunar.isLeap);
@@ -271,7 +263,6 @@ public class Utils {
         }
 
         nCalendar.dateTimeList = dateTimes;
-        nCalendar.localDateList = localDateList;
         nCalendar.lunarList = lunarList;
         return nCalendar;
 
@@ -294,6 +285,7 @@ public class Utils {
     public static NCalendar getWeekCalendar2(DateTime dateTime, int type) {
         List<DateTime> dateTimeList = new ArrayList<>();
         List<String> lunarStringList = new ArrayList<>();
+        List<String> localDateList = new ArrayList<>();
 
         if (type == 0) {
             dateTime = getSunFirstDayOfWeek(dateTime);
@@ -309,6 +301,7 @@ public class Utils {
             String lunarDayString = LunarCalendarUtils.getLunarDayString(dateTime1.getYear(), dateTime1.getMonthOfYear(), dateTime1.getDayOfMonth(), lunar.lunarYear, lunar.lunarMonth, lunar.lunarDay, lunar.isLeap);
 
             dateTimeList.add(dateTime1);
+            localDateList.add(dateTime1.toLocalDate().toString());
             lunarStringList.add(lunarDayString);
         }
         calendar.dateTimeList = dateTimeList;
@@ -362,7 +355,6 @@ public class Utils {
     public static class NCalendar {
         public List<DateTime> dateTimeList;
         public List<String> lunarList;
-        public List<String> localDateList;//2004-12-12
     }
 
 
@@ -415,7 +407,6 @@ public class Utils {
         }
         return workdayList;
     }
-
 
 
     public static String getHolidayJson(Context context) {

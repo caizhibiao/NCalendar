@@ -5,14 +5,13 @@ import android.content.res.TypedArray;
 import android.graphics.Color;
 import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
-import android.view.MotionEvent;
 import android.view.ViewTreeObserver;
 
 import com.necer.ncalendar.R;
-import com.necer.ncalendar.adapter.NCalendarAdapter;
+import com.necer.ncalendar.adapter.CalendarAdapter;
 import com.necer.ncalendar.utils.Attrs;
 import com.necer.ncalendar.utils.Utils;
-import com.necer.ncalendar.view.NCalendarView;
+import com.necer.ncalendar.view.CalendarView;
 
 import org.joda.time.DateTime;
 
@@ -24,27 +23,26 @@ import java.util.List;
  * QQ:619008099
  */
 
-public abstract class NCalendarPager extends ViewPager {
+public abstract class CalendarPager extends ViewPager {
 
-    protected NCalendarAdapter calendarAdapter;
+    protected CalendarAdapter calendarAdapter;
     protected DateTime startDateTime;
     protected DateTime endDateTime;
     protected int mPageSize;
     protected int mCurrPage;
-    protected boolean isSetDateTime;
     protected DateTime mInitialDateTime;//日历初始化datetime，即今天
     protected DateTime mSelectDateTime;//当前页面选中的datetime
-
     protected List<String> pointList;//圆点
 
+    protected boolean isPagerChanged = true;//是否是手动翻页
+    protected DateTime lastSelectDateTime;//上次选中的datetime
+    protected boolean isDefaultSelect = true;//是否默认选中
 
-
-
-    public NCalendarPager(Context context) {
+    public CalendarPager(Context context) {
         this(context, null);
     }
 
-    public NCalendarPager(Context context, AttributeSet attrs) {
+    public CalendarPager(Context context, AttributeSet attrs) {
         super(context, attrs);
 
         TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.NCalendar);
@@ -68,25 +66,29 @@ public abstract class NCalendarPager extends ViewPager {
 
         Attrs.isShowHoliday = ta.getBoolean(R.styleable.NCalendar_isShowHoliday, true);
         Attrs.holidayColor = ta.getColor(R.styleable.NCalendar_holidayColor, getResources().getColor(R.color.holidayColor));
-        Attrs.workdayColor = ta.getColor(R.styleable.NCalendar_holidayColor, getResources().getColor(R.color.workdayColor));
-
+        Attrs.workdayColor = ta.getColor(R.styleable.NCalendar_workdayColor, getResources().getColor(R.color.workdayColor));
 
 
         String firstDayOfWeek = ta.getString(R.styleable.NCalendar_firstDayOfWeek);
         String defaultCalendar = ta.getString(R.styleable.NCalendar_defaultCalendar);
+
+        String startString = ta.getString(R.styleable.NCalendar_startDate);
+        String endString = ta.getString(R.styleable.NCalendar_endDate);
 
         Attrs.firstDayOfWeek = "Monday".equals(firstDayOfWeek) ? 1 : 0;
         Attrs.defaultCalendar = "Week".equals(defaultCalendar) ? NCalendar.WEEK : NCalendar.MONTH;
 
         ta.recycle();
 
-        mInitialDateTime = new DateTime();
-        startDateTime = new DateTime("1901-01-01");
-        endDateTime = new DateTime("2099-12-31");
+        mInitialDateTime = new DateTime().withTimeAtStartOfDay();
+
+        startDateTime = new DateTime(startString == null ? "1901-01-01" : startString);
+        endDateTime = new DateTime(endString == null ? "2099-12-31" : endString);
 
 
-
-
+        if (mInitialDateTime.getMillis() < startDateTime.getMillis() || mInitialDateTime.getMillis() > endDateTime.getMillis()) {
+            throw new RuntimeException(getResources().getString(R.string.range_date));
+        }
 
         calendarAdapter = getCalendarAdapter();
         setAdapter(calendarAdapter);
@@ -108,6 +110,7 @@ public abstract class NCalendarPager extends ViewPager {
         });
 
 
+
         getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
@@ -120,23 +123,34 @@ public abstract class NCalendarPager extends ViewPager {
     }
 
 
-    protected abstract NCalendarAdapter getCalendarAdapter();
+    protected abstract CalendarAdapter getCalendarAdapter();
 
     protected abstract void initCurrentCalendarView(int position);
 
     protected abstract void setDateTime(DateTime dateTime);
 
+    public void toToday() {
+        setDateTime(new DateTime().withTimeAtStartOfDay());
+    }
+
+
+    /**
+     * 下一页，月日历即是下一月，周日历即是下一周
+     */
+    public void toNextPager() {
+        setCurrentItem(getCurrentItem() + 1, true);
+    }
+
+    /**
+     * 上一页
+     */
+    public void toLastPager() {
+        setCurrentItem(getCurrentItem() - 1, true);
+    }
+
     //设置日期
     public void setDate(String formatDate) {
         setDateTime(new DateTime(formatDate));
-    }
-
-    public DateTime getStartDateTime() {
-        return startDateTime;
-    }
-
-    public DateTime getEndDateTime() {
-        return endDateTime;
     }
 
     public void setPointList(List<String> pointList) {
@@ -148,28 +162,18 @@ public abstract class NCalendarPager extends ViewPager {
         }
 
         this.pointList = formatList;
-        NCalendarView nCalendarView = calendarAdapter.getCalendarViews().get(getCurrentItem());
-        if (nCalendarView == null) {
+        CalendarView calendarView = calendarAdapter.getCalendarViews().get(getCurrentItem());
+        if (calendarView == null) {
             return;
         }
-        nCalendarView.setPointList(pointList);
+        calendarView.setPointList(formatList);
+    }
+
+    public void setDefaultSelect(boolean defaultSelect) {
+        isDefaultSelect = defaultSelect;
     }
 
 
-    private boolean isScrollEnable = true;
 
-    public void setScrollEnable(boolean isScrollEnable) {
-        this.isScrollEnable = isScrollEnable;
-    }
-
-    @Override
-    public boolean onTouchEvent(MotionEvent ev) {
-        return isScrollEnable ? super.onTouchEvent(ev) : false;
-    }
-
-    @Override
-    public boolean onInterceptTouchEvent(MotionEvent ev) {
-        return isScrollEnable ? super.onInterceptTouchEvent(ev) : false;
-    }
 
 }

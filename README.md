@@ -1,7 +1,11 @@
 # NCalendar
 一款仿miui日历，月视图，周视图滑动切换，时间从1901-01-01到2099-12-31
 
+支持自定义日期区间
+
 支持农历，节假日，指示圆点，默认视图，周的第一天设置等
+
+支持单一月日历、周日历设置默认选中和默认不选中
 
 
 ## 效果图
@@ -15,9 +19,9 @@ http://fir.im/7lv4
 
 #### Gradle
 ```
-compile 'com.necer.ncalendar:ncalendar:2.3.2'
+compile 'com.necer.ncalendar:ncalendar:2.4.2'
 ```
-##### 注意：ncalendar：1.0.x 的日历不能升级到 2.x.x，ncalendar:2.x.x是全新的日历
+
 
 #### 布局文件
 
@@ -33,16 +37,19 @@ compile 'com.necer.ncalendar:ncalendar:2.3.2'
         <android.support.v7.widget.RecyclerView
             android:id="@+id/recyclerView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:background="@android:color/white"/>
 
  </com.necer.ncalendar.calendar.NCalendar>
        
 
 ```
+#### 注意
 
+```NCalendar```内部的布局需要加上背景颜色，只要是不透明的颜色都可以
 
-```ncalendar:2.x.x```包含一个月日历```NMonthCalendar```，一个周日历```NWeekCalendar```和一个滑动切换不同视图的```NCalendar```，
-单一日历请使用```NMonthCalendar```或者```NWeekCalendar```。
+```ncalendar:2.x.x```包含一个月日历```MonthCalendar```，一个周日历```WeekCalendar```和一个滑动切换不同视图的```NCalendar```，
+单一日历请使用```MonthCalendar```或者```WeekCalendar```。
 
 ```NCalendar```日历包含了周日历和月日历，通过滑动切换不同的视图，交互效果仿miui日历，尽可能的实现miui的交互逻辑。
 
@@ -74,12 +81,19 @@ ncalendar.setDate("2017-12-31");
 ncalendar.toToday(); 
 ```
 
-##### 4、月-->周  周-->月
+##### 4、日历切换，月-->周  周-->月
 ```
 ncalendar.toWeek();
 ncalendar.toMonth();
 ```
-##### 5、添加指示圆点
+##### 5、上一月、下一月、上一周、下一周
+```
+ncalendar.toNextPager();
+ncalendar.toLastPager();
+
+```
+
+##### 6、添加指示圆点
 ```
 List<String> list = new ArrayList<>();
 list.add("2017-09-21");
@@ -92,7 +106,7 @@ list.add("2017-11-21");
 ncalendar.setPoint(list);
 
 ```
-##### 6、支持自定义属性，设置NCalendar默认视图、一周的第一天是周日还是周一等
+##### 7、支持自定义属性，设置NCalendar默认视图、一周的第一天是周日还是周一等
 ```
 NCalendar默认视图,Month 或者 Week，默认是 Month
 
@@ -106,6 +120,22 @@ app:firstDayOfWeek="Sunday"
 app:firstDayOfWeek="Monday" 
 
 ```
+
+##### 8、支持自定义日期区间
+```
+app:startDate="2010-10-01"
+app:endDate="2018-10-31"
+```
+
+
+##### 9、单一月日历、周日历设置默认不选中
+```
+false为不选中，只有点击或者跳转日期才会选中，默认为true
+
+monthcalendar.setDefaultSelect(false);
+```
+
+
 
 ### 支持的属性：
 
@@ -122,7 +152,7 @@ app:firstDayOfWeek="Monday"
 | isShowLunar| 是否显示农历 |
 | hollowCircleColor| 选中空心圆中间的颜色|
 | hollowCircleStroke| 选中空心圆圆环粗细 |
-| calendarHeight|日历高度，在NCalendar中使用 |
+| calendarHeight|月日历高度 |
 | defaultCalendar|NCalendar日历默认视图|
 | firstDayOfWeek|每周第一天是周日还是周一|
 | duration|自动折叠时间|
@@ -131,10 +161,9 @@ app:firstDayOfWeek="Monday"
 | workdayColor|工作日日“班”字颜色|
 | pointSize|指示圆点大小|
 | pointColor|指示圆点颜色|
+| startDate|日期开始时间|
+| endDate|日期结束时间|
 
-
-
-### 联系我加qq ：619008099
 
 #### View绘制：http://blog.csdn.net/y12345654321/article/details/73331253
 #### 滑动处理：http://blog.csdn.net/y12345654321/article/details/77978148
